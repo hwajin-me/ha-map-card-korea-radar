@@ -27,5 +27,7 @@ plugins:
   - name: buienradar
     url: /local/BuienradarPlugin.js
     options:
+      delayMs: 750
+      opacity: 0.7
       renderBranding: false
 ```
