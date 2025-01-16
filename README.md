@@ -28,6 +28,9 @@ plugins:
     url: /local/BuienradarPlugin.js
     options:
       delayMs: 750
+      offsetMinutes:
+        negative: -20
+        positive: 170
       opacity: 0.7
       renderBranding: false
 ```

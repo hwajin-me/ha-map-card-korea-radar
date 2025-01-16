@@ -7,16 +7,18 @@ export default function (L, pluginBase) {
   return class BuienradarPlugin extends pluginBase {
     constructor(map, name, options = {}) {
       super(map, name, options);
-      const { delayMs, opacity, renderBranding } = options
+      const { delayMs, opacity, offsetMinutes, renderBranding } = options
       this.delayMs = Number(delayMs);
-      this.c = Number(opacity);
+      this.offsetMinutesPositive = Number(offsetMinutes['positive']);
+      this.offsetMinutesNegative = Number(offsetMinutes['negative']);
+      this.opacity = Number(opacity);
       this.renderBranding = Boolean(renderBranding);
       console.debug("[HaMapCard] [BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
     }
 
     init() {
       console.debug("[HaMapCard] [BuienradarPlugin] Called init() of plugin:", this.name);
-      this.offsetMinutes = 0;
+      this.offsetMinutes = this.offsetMinutesNegative;
       this.url = new URL("https://image.buienradar.nl/2.0/image/single/RadarMapRainWebmercatorNL");
       this.url.searchParams.set("extension", "png");
       this.url.searchParams.set("renderBackground", "false");
@@ -78,7 +80,10 @@ export default function (L, pluginBase) {
       }
 
       this.offsetMinutes += 5;
-      this.offsetMinutes %= 60 * 3;
+      if (this.offsetMinutes > this.offsetMinutesPositive) {
+        this.offsetMinutes = this.offsetMinutesNegative;
+      }
+
       this.preloadDate = this.getDate();
       this.url.searchParams.set("timestamp", this.getTimestamp(this.preloadDate));
       this.preload.src = this.url.href;
