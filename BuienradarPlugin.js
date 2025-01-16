@@ -22,7 +22,11 @@ export default function (L, pluginBase) {
       this.url.searchParams.set("renderBackground", "false");
       this.url.searchParams.set("renderText", "false");
       this.url.searchParams.set("renderBranding", this.renderBranding.toString());
-      this.url.searchParams.set("timestamp", this.getTimestamp(this.getDate()));
+
+      this.preloadDate = this.getDate();
+      this.preload = new Image();
+      this.url.searchParams.set("timestamp", this.getTimestamp(this.preloadDate));
+      this.preload.src = this.url.href;
 
       L.Control.Textbox = L.Control.extend({
         onAdd: function (map) {
@@ -60,18 +64,24 @@ export default function (L, pluginBase) {
 
       this.timeBox = L.control.textbox({ position: 'topright' });
       this.timeBox.addTo(this.map);
+      this.rainLayer.on('load', () => this.timeBox._container.style.color = '');
     }
 
     update() {}
 
     nextFrame() {
+      this.rainLayer.setUrl(this.preload.src);
+      const date = this.preloadDate;
+      this.timeBox._container.firstChild.innerHTML = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+      if (!this.preload.complete) {
+        this.timeBox._container.style.color = 'var(--error-color)';
+      }
+
       this.offsetMinutes += 5;
       this.offsetMinutes %= 60 * 3;
-      const date = this.getDate();
-
-      this.url.searchParams.set("timestamp", this.getTimestamp(date));
-      this.rainLayer.setUrl(this.url.href);
-      this.timeBox._container.firstChild.innerHTML = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+      this.preloadDate = this.getDate();
+      this.url.searchParams.set("timestamp", this.getTimestamp(this.preloadDate));
+      this.preload.src = this.url.href;
     }
   };
 }
