@@ -25,7 +25,7 @@ tile_layer_url: https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.pn
 tile_layer_attribution: >-
   &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>,
   &copy; <a href="https://carto.com/attributions">CARTO</a>,
-  &copy; <a href="https://buienradar.nl">Buienradar</a>
+  &copy; <a href="https://www.buienradar.nl">Buienradar.nl</a>
 entities:
   - entity: zone.home
     display: icon
