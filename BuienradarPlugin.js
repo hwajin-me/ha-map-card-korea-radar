@@ -3,7 +3,7 @@
  * @param L
  * @param pluginBase
  */
-export default function (L, pluginBase) {
+export default function (L, pluginBase, logger) {
   return class BuienradarPlugin extends pluginBase {
     constructor(map, name, options = {}) {
       super(map, name, options);
@@ -13,11 +13,11 @@ export default function (L, pluginBase) {
       this.offsetMinutesNegative = Number(offsetMinutes['negative']);
       this.opacity = Number(opacity);
       this.renderBranding = Boolean(renderBranding);
-      console.debug("[HaMapCard] [BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
+      logger.debug("[HaMapCard] [BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
     }
 
     init() {
-      console.debug("[HaMapCard] [BuienradarPlugin] Called init() of plugin:", this.name);
+      logger.debug("[HaMapCard] [BuienradarPlugin] Called init() of plugin:", this.name);
       this.offsetMinutes = this.offsetMinutesNegative;
       this.url = new URL("https://image.buienradar.nl/2.0/image/single/RadarMapRainWebmercatorNL");
       this.url.searchParams.set("extension", "png");
@@ -46,6 +46,11 @@ export default function (L, pluginBase) {
       this.interval = setInterval(this.nextFrame.bind(this), this.delayMs);
     }
 
+    destroy() {
+      clearInterval(this.interval);
+      this.interval = undefined;
+    }
+
     getDate() {
       const date = new Date();
       date.setTime(date.getTime() - (date.getTime() % (5 * 60000)) + (this.offsetMinutes * 60000));
@@ -58,7 +63,7 @@ export default function (L, pluginBase) {
     }
 
     renderMap() {
-      console.debug("[HaMapCard] [BuienradarPlugin] Called render() of Plugin:", this.name);
+      logger.debug("[HaMapCard] [BuienradarPlugin] Called render() of Plugin:", this.name);
 
       const latLngBounds = L.latLngBounds([[49.5, 0], [54.8, 10]]);
       this.rainLayer = L.imageOverlay(this.url.href, latLngBounds, { "opacity": this.opacity });

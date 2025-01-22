@@ -3,7 +3,7 @@
 
 
 ## Installation
-1. Install [ha-map-card](https://github.com/nathan-gs/ha-map-card) with [plugin support](https://github.com/nathan-gs/ha-map-card/pull/113).
+1. Install [ha-map-card](https://github.com/nathan-gs/ha-map-card) version `v1.13.0` or above.
 1. Copy `BuienradarPlugin.js` to the `www` folder of your Home Assistance configuration.
 
 ## Configuration
