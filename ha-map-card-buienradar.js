@@ -7,28 +7,30 @@ export default function (L, pluginBase, logger) {
   return class BuienradarPlugin extends pluginBase {
     constructor(map, name, options = {}) {
       super(map, name, options);
-      const { delayMs, opacity, offsetMinutes, renderBranding } = options
-      this.delayMs = Number(delayMs);
-      this.offsetMinutesPositive = Number(offsetMinutes['positive']);
-      this.offsetMinutesNegative = Number(offsetMinutes['negative']);
+      const { delaySeconds, refreshSeconds, opacity, imageRange } = options;
+      this.delaySeconds = Number(delaySeconds);
+      this.refreshSeconds = Number(refreshSeconds);
+      this.history = Number(imageRange['history']);
+      this.forecast = Number(imageRange['forecast']);
+      this.skip = Number(imageRange['skip']);
       this.opacity = Number(opacity);
-      this.renderBranding = Boolean(renderBranding);
       logger.debug("[HaMapCard] [BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
     }
 
-    init() {
+    async init() {
       logger.debug("[HaMapCard] [BuienradarPlugin] Called init() of plugin:", this.name);
-      this.offsetMinutes = this.offsetMinutesNegative;
-      this.url = new URL("https://image.buienradar.nl/2.0/image/single/RadarMapRainWebmercatorNL");
+      this.url = new URL("https://image.buienradar.nl/2.0/metadata/sprite/RadarMapRainWebmercatorNL");
+      this.url.searchParams.set("width", 1058);
+      this.url.searchParams.set("height", 915);
       this.url.searchParams.set("extension", "png");
       this.url.searchParams.set("renderBackground", "false");
       this.url.searchParams.set("renderText", "false");
-      this.url.searchParams.set("renderBranding", this.renderBranding.toString());
-
-      this.preloadDate = this.getDate();
-      this.preload = new Image();
-      this.url.searchParams.set("timestamp", this.getTimestamp(this.preloadDate));
-      this.preload.src = this.url.href;
+      this.url.searchParams.set("renderBranding", "false");
+      this.url.searchParams.set("history", this.history);
+      this.url.searchParams.set("forecast", this.forecast);
+      this.url.searchParams.set("skip", this.skip);
+      this.overlayImages = await this.getOverlayImages();
+      this.currentImage = 0;
 
       L.Control.Textbox = L.Control.extend({
         onAdd: function (map) {
@@ -43,23 +45,46 @@ export default function (L, pluginBase, logger) {
       });
       L.control.textbox = function (opts) { return new L.Control.Textbox(opts); }
 
-      this.interval = setInterval(this.nextFrame.bind(this), this.delayMs);
+      this.delayInterval = setInterval(this.nextFrame.bind(this), this.delaySeconds * 1000);
+      this.refreshInterval = setInterval(this.refreshOverlayImages.bind(this), this.refreshSeconds * 1000);
     }
 
     destroy() {
-      clearInterval(this.interval);
-      this.interval = undefined;
+      clearInterval(this.delayInterval);
+      this.delayInterval = undefined;
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = undefined;
     }
 
-    getDate() {
-      const date = new Date();
-      date.setTime(date.getTime() - (date.getTime() % (5 * 60000)) + (this.offsetMinutes * 60000));
-      return date;
+    async getOverlayImages() {
+      const res = await fetch(this.url);
+      if (!res.ok) {
+        throw new Error("Could not fetch spites metadata");
+      }
+
+      const json = await res.json();
+      const images = json["times"].map((t) => {
+        const preload = new Image();
+        const promise = new Promise((resolve, reject) => {
+          preload.onload = resolve;
+          preload.onerror = reject;
+        });
+        preload.src = t["url"];
+        return {
+          'timestamp': new Date(t["timestamp"] + "Z"),
+          'image': preload,
+          'loadPromise': promise,
+        }
+      });
+      
+      return images;
     }
 
-    getTimestamp(date) {
-      const pad = (num) => num.toString().padStart(2, '0');
-      return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}`;
+    async refreshOverlayImages() {
+      const images = await this.getOverlayImages();
+      const promises = images.map((i) => i['loadPromise']);
+      await Promise.all(promises);
+      this.overlayImages = images;
     }
 
     renderMap() {
@@ -77,21 +102,14 @@ export default function (L, pluginBase, logger) {
     update() {}
 
     nextFrame() {
-      this.rainLayer.setUrl(this.preload.src);
-      const date = this.preloadDate;
+      this.currentImage = (this.currentImage + 1) % this.overlayImages.length;
+      const current = this.overlayImages[this.currentImage];
+      this.rainLayer.setUrl(current.image.src);
+      const date = current.timestamp;
       this.timeBox._container.firstChild.innerHTML = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-      if (!this.preload.complete) {
+      if (!current.image.complete) {
         this.timeBox._container.style.color = 'var(--error-color)';
       }
-
-      this.offsetMinutes += 5;
-      if (this.offsetMinutes > this.offsetMinutesPositive) {
-        this.offsetMinutes = this.offsetMinutesNegative;
-      }
-
-      this.preloadDate = this.getDate();
-      this.url.searchParams.set("timestamp", this.getTimestamp(this.preloadDate));
-      this.preload.src = this.url.href;
     }
   };
 }

@@ -17,6 +17,16 @@ Note: with a manual installation, the `url` in the configuration should be `/loc
 
 ## Configuration
 Add the [ha-map-card](https://github.com/nathan-gs/ha-map-card) custom card to your Home Assistant dashboard.
+
+| Option                   | Description                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `delaySeconds`           | The amount of seconds between every sprite image.                              |
+| `imageRange.forecast`    | The amount of forecast images after the current time to fetch.                 |
+| `imageRange.history`     | The amount of historic images before the current time to fetch.                |
+| `imageRange.skip`        | The amount of 5-minute intervals to skip between every image fetched.          |
+| `opacity`                | The opacity of the image overlay.                                              |
+| `refreshSeconds`         | The amount of seconds between fetching new image data.                         |
+
 Use the following configuration as example:
 ```yaml
 type: custom:map-card
@@ -36,10 +46,11 @@ plugins:
   - name: buienradar
     url: /local/community/ha-map-card-buienradar/ha-map-card-buienradar.js
     options:
-      delayMs: 750
-      offsetMinutes:
-        negative: -20
-        positive: 170
+      delaySeconds: 0.75
+      imageRange:
+        forecast: 36
+        history: 4
+        skip: 0
       opacity: 0.7
-      renderBranding: false
+      refreshSeconds: 300
 ```
