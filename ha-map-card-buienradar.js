@@ -76,7 +76,7 @@ export default function (L, pluginBase, logger) {
           'loadPromise': promise,
         }
       });
-      
+
       return images;
     }
 
@@ -99,7 +99,7 @@ export default function (L, pluginBase, logger) {
       this.rainLayer.on('load', () => this.timeBox._container.style.color = '');
     }
 
-    update() {}
+    update() { }
 
     nextFrame() {
       this.currentImage = (this.currentImage + 1) % this.overlayImages.length;
