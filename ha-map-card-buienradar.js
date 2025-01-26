@@ -91,7 +91,7 @@ export default function (L, pluginBase, logger) {
       logger.debug("[HaMapCard] [BuienradarPlugin] Called render() of Plugin:", this.name);
 
       const latLngBounds = L.latLngBounds([[49.5, 0], [54.8, 10]]);
-      this.rainLayer = L.imageOverlay(this.url.href, latLngBounds, { "opacity": this.opacity });
+      this.rainLayer = L.imageOverlay(this.overlayImages[0].image.src, latLngBounds, { "opacity": this.opacity });
       this.rainLayer.addTo(this.map);
 
       this.timeBox = L.control.textbox({ position: 'topright' });
