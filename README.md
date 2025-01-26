@@ -1,5 +1,5 @@
 # `ha-map-card` Buienradar plugin
-![image](https://github.com/user-attachments/assets/ac28568c-40f8-4254-9181-667680219644)
+![image](./preview/2025-01-26_v0.2.0.gif)
 
 
 ## Installation
