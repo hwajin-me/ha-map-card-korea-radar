@@ -7,109 +7,71 @@ export default function (L, pluginBase, logger) {
   return class BuienradarPlugin extends pluginBase {
     constructor(map, name, options = {}) {
       super(map, name, options);
-      const { delaySeconds, refreshSeconds, opacity, imageRange } = options;
+      const { delaySeconds, refreshSeconds, opacity, imageRange, decorate } = options;
       this.delaySeconds = Number(delaySeconds);
-      this.refreshSeconds = Number(refreshSeconds);
-      this.history = Number(imageRange['history']);
-      this.forecast = Number(imageRange['forecast']);
-      this.skip = Number(imageRange['skip']);
+      this.start = new Date(Date.parse(imageRange['start']));
+      this.end = new Date(Date.parse(imageRange['end']));
       this.opacity = Number(opacity);
-      logger.debug("[HaMapCard] [BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
+      this.decorate = decorate;
+      if (this.decorate == undefined || this.decorate == null || this.decoreate == '') {
+        this.decorate = '<strong style="font-size: 2em">{date}</strong>';
+      }
+      logger.debug("[HaMapCard] [Korea Radar from BuienradarPlugin] Successfully invoked constructor of plugin:", this.name, "with options:", this.options);
     }
-
+ 
     async init() {
-      logger.debug("[HaMapCard] [BuienradarPlugin] Called init() of plugin:", this.name);
-      this.url = new URL("https://image.buienradar.nl/2.0/metadata/sprite/RadarMapRainWebmercatorNL");
-      this.url.searchParams.set("width", 1058);
-      this.url.searchParams.set("height", 915);
-      this.url.searchParams.set("extension", "png");
-      this.url.searchParams.set("renderBackground", "false");
-      this.url.searchParams.set("renderText", "false");
-      this.url.searchParams.set("renderBranding", "false");
-      this.url.searchParams.set("history", this.history);
-      this.url.searchParams.set("forecast", this.forecast);
-      this.url.searchParams.set("skip", this.skip);
-      this.overlayImages = await this.getOverlayImages();
+      logger.debug("[HaMapCard] [Korea Radar from BuienradarPlugin] Called init() of plugin:", this.name);
+      this.overlayImages = []
       this.currentImage = 0;
-
-      L.Control.Textbox = L.Control.extend({
+      const self = this;
+ 
+      for (var d = new Date(this.start); d <= this.end; d.setMinutes(d.getMinutes() + 10)) {
+        this.overlayImages.push({
+          src: `https://www.weather.go.kr/w/cgi-bin/rdr_new/nph-vs_rdr_cmp_img?tm=${d.getFullYear().toString().padStart(2, '0')}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}${d.getHours().toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}&size=1453`,
+          timestamp: d,
+          label: `${d.getFullYear().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`,
+        });
+      }
+ 
+      const textbox = L.Control.extend({
         onAdd: function (map) {
-          let text = L.DomUtil.create('div');
-          text.innerHTML = '<strong style="font-size: 2em"></strong>';
+          const text = L.DomUtil.create('div');
+          text.id = 'date-text';
+          text.innerHTML = self.decorate;
           return text;
         },
-
-        onRemove: function (map) {
-          // Nothing to do here
+        updateText: function (text) {
+          const container = this.getContainer();
+          if (!container) return;
+          container.innerHTML = self.decorate.replace(new RegExp("\\{date}", "gi"), text);
         }
       });
-      L.control.textbox = function (opts) { return new L.Control.Textbox(opts); }
-
+      this.textbox = new textbox({ position: 'topright' });
+      this.textbox.addTo(this.map);
+      
       this.delayInterval = setInterval(this.nextFrame.bind(this), this.delaySeconds * 1000);
-      this.refreshInterval = setInterval(this.refreshOverlayImages.bind(this), this.refreshSeconds * 1000);
     }
-
+ 
     destroy() {
       clearInterval(this.delayInterval);
       this.delayInterval = undefined;
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = undefined;
     }
-
-    async getOverlayImages() {
-      const res = await fetch(this.url);
-      if (!res.ok) {
-        throw new Error("Could not fetch spites metadata");
-      }
-
-      const json = await res.json();
-      const images = json["times"].map((t) => {
-        const preload = new Image();
-        const promise = new Promise((resolve, reject) => {
-          preload.onload = resolve;
-          preload.onerror = reject;
-        });
-        preload.src = t["url"];
-        return {
-          'timestamp': new Date(t["timestamp"] + "Z"),
-          'image': preload,
-          'loadPromise': promise,
-        }
-      });
-
-      return images;
-    }
-
-    async refreshOverlayImages() {
-      const images = await this.getOverlayImages();
-      const promises = images.map((i) => i['loadPromise']);
-      await Promise.all(promises);
-      this.overlayImages = images;
-    }
-
+ 
     renderMap() {
-      logger.debug("[HaMapCard] [BuienradarPlugin] Called render() of Plugin:", this.name);
-
-      const latLngBounds = L.latLngBounds([[49.5, 0], [54.8, 10]]);
-      this.rainLayer = L.imageOverlay(this.overlayImages[0].image.src, latLngBounds, { "opacity": this.opacity });
+      logger.debug("[HaMapCard] [Korea Radar from BuienradarPlugin] Called render() of Plugin:", this.name);
+ 
+      const latLngBounds = L.latLngBounds([[30.830733701421657, 121.3822799316216], [40.11457219962541, 133.06990387691684]]);
+      this.rainLayer = L.imageOverlay(this.overlayImages[0].src, latLngBounds, { "opacity": this.opacity });
       this.rainLayer.addTo(this.map);
-
-      this.timeBox = L.control.textbox({ position: 'topright' });
-      this.timeBox.addTo(this.map);
-      this.rainLayer.on('load', () => this.timeBox._container.style.color = '');
+      this.textbox.updateText(this.overlayImages[0].label);
     }
-
+ 
     update() { }
-
+ 
     nextFrame() {
       this.currentImage = (this.currentImage + 1) % this.overlayImages.length;
-      const current = this.overlayImages[this.currentImage];
-      this.rainLayer.setUrl(current.image.src);
-      const date = current.timestamp;
-      this.timeBox._container.firstChild.innerHTML = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-      if (!current.image.complete) {
-        this.timeBox._container.style.color = 'var(--error-color)';
-      }
+      this.rainLayer.setUrl(this.overlayImages[this.currentImage].src);
+      this.textbox.updateText(this.overlayImages[this.currentImage].label);
     }
   };
 }
