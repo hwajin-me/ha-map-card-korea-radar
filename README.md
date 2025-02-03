@@ -18,39 +18,22 @@ Note: with a manual installation, the `url` in the configuration should be `/loc
 ## Configuration
 Add the [ha-map-card](https://github.com/hwajin-me/ha-map-card-korea-radar/) custom card to your Home Assistant dashboard.
 
-| Option                   | Description                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `delaySeconds`           | The amount of seconds between every sprite image.                              |
-| `imageRange.start`       | The start date-time to fetch.                                                  |
-| `imageRange.end`         | The end date-time to fetch                                                     |
-| `opacity`                | The opacity of the image overlay.                                              |
-| `decorate`               | The HTML string for date-time to display (default is `<div>{date}</div>`)      |
-
 Use the following configuration as example:
 ```yaml
 type: custom:map-card
-card_size: 8
-focus_entity: zone.home
+x: 37.5490248
+"y": 127.0705509
 zoom: 7
-tile_layer_url: https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png
-tile_layer_attribution: >-
-  &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>,
-  &copy; <a href="https://carto.com/attributions">CARTO</a>,
-  &copy; <a href="https://www.buienradar.nl">Buienradar.nl</a>
-entities:
-  - entity: zone.home
-    display: icon
-    size: 15
 plugins:
-  - name: korea-radar
+  - name: korea-radar 
     url: >-
       /local/community/ha-map-card-korea-radar/ha-map-card-korea-radar.js
     options:
-      delaySeconds: 3
-      imageRange:
-        start: "2025-02-03T10:00:00"
-        end: "2025-02-03T10:10:00"
+      delay: 1
+      range:
+        start:
+          entity: input_datetime.dashboard_select_datetime
+          attribute: state
       opacity: 0.5
       decorate: <div>{date}</div>
-
 ```
